@@ -5,6 +5,7 @@ from path import Path
 from abc import abstractmethod, ABCMeta
 from torch.utils.data import Dataset
 from utils.flow_utils import load_flow
+import os
 
 
 class ImgSeqDataset(Dataset, metaclass=ABCMeta):
@@ -24,14 +25,14 @@ class ImgSeqDataset(Dataset, metaclass=ABCMeta):
 
     def _load_sample(self, s):
         images = s['imgs']
-        images = [imageio.imread(self.root / p).astype(np.float32) for p in images]
+        images = [imageio.imread(p).astype(np.float32) for p in images]
 
         target = {}
         if 'flow' in s:
-            target['flow'] = load_flow(self.root / s['flow'])
+            target['flow'] = load_flow(s['flow'])
         if 'mask' in s:
             # 0~255 HxWx1
-            mask = imageio.imread(self.root / s['mask']).astype(np.float32) / 255.
+            mask = imageio.imread(s['mask']).astype(np.float32) / 255.
             if len(mask.shape) == 3:
                 mask = mask[:, :, 0]
             target['mask'] = np.expand_dims(mask, -1)
@@ -77,7 +78,7 @@ class SintelRaw(ImgSeqDataset):
 
             for st in range(0, len(img_list) - self.n_frames + 1):
                 seq = img_list[st:st + self.n_frames]
-                sample = {'imgs': [self.root.relpathto(file) for file in seq]}
+                sample = {'imgs': [os.path.realpath(file) for file in seq]}
                 samples.append(sample)
         return samples
 
@@ -104,10 +105,11 @@ class Sintel(ImgSeqDataset):
         img_dir = self.root / Path(self.dataset_type)
         flow_dir = self.root / 'flow'
 
-        assert img_dir.isdir() and flow_dir.isdir()
+        assert img_dir.isdir() and flow_dir.isdir(), f"{img_dir} {flow_dir}"
 
         samples = []
-        for flow_map in sorted((self.root / flow_dir).glob('*/*.flo')):
+        print((self.root / flow_dir))
+        for flow_map in sorted((flow_dir).glob('*/*.flo')):
             info = flow_map.splitall()
             scene, filename = info[-2:]
             fid = int(filename[-8:-4])
@@ -140,6 +142,7 @@ class Sintel(ImgSeqDataset):
                 continue
             samples.append(s)
 
+        print("len", len(samples))
         return samples
 
 
