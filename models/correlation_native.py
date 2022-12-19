@@ -63,15 +63,15 @@ if __name__ == '__main__':
 
         assert torch.allclose(y1, y2, atol=1e-7)
 
-        print('Forward: cuda: {:.3f}ms, pytorch: {:.3f}ms'.format(t1_f * 100, t2_f * 100))
+        print('Forward: cuda: {:.3f}ms, pytorch: {:.3f}ms'.format(t2_f * 100, t1_f * 100))
         print(
-            'Backward: cuda: {:.3f}ms, pytorch: {:.3f}ms'.format(t1_b * 100, t2_b * 100))
+            'Backward: cuda: {:.3f}ms, pytorch: {:.3f}ms'.format(t2_b * 100, t1_b * 100))
 
         if i < 3:
             continue
         t1_sum += t1_b + t1_f
         t2_sum += t2_b + t2_f
 
-    print('cuda: {:.3f}s, pytorch: {:.3f}s'.format(t1_sum, t2_sum))
+    print('cuda: {:.3f}s, pytorch: {:.3f}s'.format(t2_sum, t1_sum))
     ...
 
