@@ -26,10 +26,12 @@ class ToPILImage(tf.ToPILImage):
 
 
 class ColorJitter(tf.ColorJitter):
+    # pass
     def __call__(self, imgs):
-        transform = self.get_params(self.brightness, self.contrast,
-                                    self.saturation, self.hue)
-        return [transform(im) for im in imgs]
+        # transform = tf.ColorJitter(brightness=self.brightness, contrast=self.contrast, saturation=self.saturation, hue=self.hue) #self.get_params(self.brightness, self.contrast,
+        #             #                self.saturation, self.hue)
+        # super(ColorJitter, self).__call__(imgs[0])
+        return [super(ColorJitter, self).__call__(im) for im in imgs]
 
 
 class ToTensor(tf.ToTensor):
