@@ -1,5 +1,5 @@
- {"data": {"root_sintel": "/Data/flow_dataset/MPI_Sintel",
-          "root_sintel_raw": "/Data2/Sintel_Video/scene",
+ {"data": {"root_sintel": "MPI_Sintel",
+          "root_sintel_raw": "scene/",
           "run_at": false,
           "test_shape": [448, 1024],
           "train_n_frames": 2,
