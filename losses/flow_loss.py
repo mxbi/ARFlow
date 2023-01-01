@@ -3,7 +3,11 @@ import torch.nn.functional as F
 from .loss_blocks import SSIM, smooth_grad_1st, smooth_grad_2nd, TernaryLoss
 from utils.warp_utils import flow_warp
 from utils.warp_utils import get_occu_mask_bidirection, get_occu_mask_backward
+import torch
 
+def cn(t):
+    if torch.isnan(t).any():
+        raise ValueError('nan found in tensor, shape={}, count={}'.format(t.shape, torch.isnan(t).sum()))
 
 class unFlowLoss(nn.modules.Module):
     def __init__(self, cfg):
@@ -21,8 +25,8 @@ class unFlowLoss(nn.modules.Module):
                                             im1_scaled * occu_mask1)]
 
         if self.cfg.w_ternary > 0:
-            loss += [self.cfg.w_ternary * TernaryLoss(im1_recons * occu_mask1,
-                                                      im1_scaled * occu_mask1)]
+           loss += [self.cfg.w_ternary * TernaryLoss(im1_recons * occu_mask1,
+                                                     im1_scaled * occu_mask1)]
 
         return sum([l.mean() for l in loss]) / occu_mask1.mean()
 
@@ -65,21 +69,73 @@ class unFlowLoss(nn.modules.Module):
             im1_scaled = F.interpolate(im1_origin, (h, w), mode='area')
             im2_scaled = F.interpolate(im2_origin, (h, w), mode='area')
 
-            im1_recons = flow_warp(im2_scaled, flow[:, :2], pad=self.cfg.warp_pad)
-            im2_recons = flow_warp(im1_scaled, flow[:, 2:], pad=self.cfg.warp_pad)
+            flow_12 = flow[:, :2]
+            flow_21 = flow[:, 2:]
+            # backwards warp im2->im1 and im1->im2
+            if True: # Use softsplat!
+                import softsplat
 
-            if i == 0:
-                if self.cfg.occ_from_back:
-                    occu_mask1 = 1 - get_occu_mask_backward(flow[:, 2:], th=0.2)
-                    occu_mask2 = 1 - get_occu_mask_backward(flow[:, :2], th=0.2)
+                im1_warped = flow_warp(im2_scaled, flow_12, pad=self.cfg.warp_pad)
+                im2_warped = flow_warp(im1_scaled, flow_21, pad=self.cfg.warp_pad)
+
+                im1_metric = torch.nn.functional.l1_loss(im1_warped, im1_scaled, reduction='none').mean(dim=1, keepdim=True)
+                im2_metric = torch.nn.functional.l1_loss(im2_warped, im2_scaled, reduction='none').mean(dim=1, keepdim=True)
+
+                # print(flow_21.min(), flow_21.max())
+                im1_recons = 1*softsplat.softsplat(tenIn=im2_scaled, tenFlow=flow_21, tenMetric=(-20*im2_metric).clip(-20.0, 20.0), strMode='soft')
+                im2_recons = 1*softsplat.softsplat(tenIn=im1_scaled, tenFlow=flow_12, tenMetric=(-20*im1_metric).clip(-20.0, 20.0), strMode='soft')
+                # print(im1_recons.shape)
+
+                if i == 0:
+                    if self.cfg.occ_from_back:
+                        occu_mask1 = 1 - get_occu_mask_backward(flow_12, th=0.2)
+                        occu_mask2 = 1 - get_occu_mask_backward(flow_21, th=0.2)
+                    else:
+                        occu_mask1 = 1 - get_occu_mask_bidirection(flow_12, flow_21)
+                        occu_mask2 = 1 - get_occu_mask_bidirection(flow_21, flow_12)
                 else:
-                    occu_mask1 = 1 - get_occu_mask_bidirection(flow[:, :2], flow[:, 2:])
-                    occu_mask2 = 1 - get_occu_mask_bidirection(flow[:, 2:], flow[:, :2])
+                    occu_mask1 = F.interpolate(self.pyramid_occu_mask1[0],
+                                            (h, w), mode='nearest')
+                    occu_mask2 = F.interpolate(self.pyramid_occu_mask2[0],
+                                            (h, w), mode='nearest')
+
+                occu_mask1 *= 1 - ((im1_recons == 0).sum(axis=1) == 3).unsqueeze(1).float()
+                occu_mask2 *= 1 - ((im2_recons == 0).sum(axis=1) == 3).unsqueeze(1).float()
+
+                # im2_recons = im2_recons / 2
+                # im1_recons = im1_recons / 2
+                # import mlcrate as mlc
+                # if i == 0:
+                    # mlc.save([im1_warped, im2_warped, im1_metric, im2_metric, im1_recons, im2_recons, occu_mask1, occu_mask2, flow_12, flow_21], 'im2_debug.pkl')
             else:
-                occu_mask1 = F.interpolate(self.pyramid_occu_mask1[0],
-                                           (h, w), mode='nearest')
-                occu_mask2 = F.interpolate(self.pyramid_occu_mask2[0],
-                                           (h, w), mode='nearest')
+                im1_recons = flow_warp(im2_scaled, flow_12, pad=self.cfg.warp_pad)
+                im2_recons = flow_warp(im1_scaled, flow_21, pad=self.cfg.warp_pad)
+
+                # Estimate an occlusion mask
+                # This can be either done using backwards flow or bidirectionally
+                # For later layers, we downscale the mask from the previous layer instead
+                if i == 0:
+                    if self.cfg.occ_from_back:
+                        occu_mask1 = 1 - get_occu_mask_backward(flow_12, th=0.2)
+                        occu_mask2 = 1 - get_occu_mask_backward(flow_21, th=0.2)
+                    else:
+                        occu_mask1 = 1 - get_occu_mask_bidirection(flow_12, flow_21)
+                        occu_mask2 = 1 - get_occu_mask_bidirection(flow_21, flow_12)
+                else:
+                    occu_mask1 = F.interpolate(self.pyramid_occu_mask1[0],
+                                            (h, w), mode='nearest')
+                    occu_mask2 = F.interpolate(self.pyramid_occu_mask2[0],
+                                            (h, w), mode='nearest')
+
+                import mlcrate as mlc
+                if i == 0:
+                    mlc.save([im1_scaled, im2_scaled, im1_recons, im2_recons, occu_mask1, occu_mask2, flow_12, flow_21], 'im2_debug_old.pkl')
+
+            cn(im1_recons)
+            cn(im2_recons)
+
+            cn(occu_mask1)
+            cn(occu_mask2)
 
             self.pyramid_occu_mask1.append(occu_mask1)
             self.pyramid_occu_mask2.append(occu_mask2)
@@ -89,12 +145,12 @@ class unFlowLoss(nn.modules.Module):
             if i == 0:
                 s = min(h, w)
 
-            loss_smooth = self.loss_smooth(flow[:, :2] / s, im1_scaled)
+            loss_smooth = self.loss_smooth(flow_12 / s, im1_scaled)
 
-            if self.cfg.with_bk:
+            if self.cfg.with_bk: # Bidirectional loss
                 loss_warp += self.loss_photomatric(im2_scaled, im2_recons,
                                                    occu_mask2)
-                loss_smooth += self.loss_smooth(flow[:, 2:] / s, im2_scaled)
+                loss_smooth += self.loss_smooth(flow_21 / s, im2_scaled)
 
                 loss_warp /= 2.
                 loss_smooth /= 2.

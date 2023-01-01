@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+def cn(t):
+    if torch.isnan(t).any():
+        raise ValueError('nan found in tensor, shape={}, count={}'.format(t.shape, torch.isnan(t).sum()))
 
 # Crecit: https://github.com/simonmeister/UnFlow/blob/master/src/e2eflow/core/losses.py
 def TernaryLoss(im, im_warp, max_distance=1):
@@ -40,6 +43,8 @@ def TernaryLoss(im, im_warp, max_distance=1):
     dist = _hamming_distance(t1, t2)
     mask = _valid_mask(im, max_distance)
 
+    cn(dist)
+    cn(mask)
     return dist * mask
 
 
