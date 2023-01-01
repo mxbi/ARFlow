@@ -16,7 +16,7 @@ class TrainFramework(BaseTrainer):
         am_data_time = AverageMeter()
 
         key_meter_names = ['Loss', 'l_ph', 'l_sm', 'flow_mean']
-        key_meters = AverageMeter(i=len(key_meter_names), precision=4)
+        key_meters = AverageMeter(i=len(key_meter_names), precision=4, names=key_meter_names)
 
         self.model.train()
         end = time.time()
@@ -38,6 +38,8 @@ class TrainFramework(BaseTrainer):
             # compute output
             res_dict = self.model(img_pair, with_bk=True)
             flows_12, flows_21 = res_dict['flows_fw'], res_dict['flows_bw']
+            # List is used here because it's multiscale flow, descending in size
+            # Each flow is [B x 2 x H x W], first one has HxW as the original image (upscaled x4 apparently?)
             flows = [torch.cat([flo12, flo21], 1) for flo12, flo21 in
                      zip(flows_12, flows_21)]
             loss, l_ph, l_sm, flow_mean = self.loss_func(flows, img_pair)
@@ -56,6 +58,7 @@ class TrainFramework(BaseTrainer):
             for param in [p for p in self.model.parameters() if p.requires_grad]:
                 param.grad.data.mul_(1. / 1024)
 
+            torch.nn.utils.clip_grad_value_(self.model.parameters(), 0.01)
             self.optimizer.step()
 
             # measure elapsed time

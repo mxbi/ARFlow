@@ -7,6 +7,7 @@ from easydict import EasyDict
 
 import basic_train
 from logger import init_logger
+import torch
 
 
 if __name__ == '__main__':
@@ -46,4 +47,5 @@ if __name__ == '__main__':
     cfg_str = pprint.pformat(cfg)
     _log.info('=> configurations \n ' + cfg_str)
 
+    # with torch.autograd.detect_anomaly():
     basic_train.main(cfg, _log)

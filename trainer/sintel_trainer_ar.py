@@ -196,6 +196,7 @@ class TrainFramework(BaseTrainer):
         # In order to reduce the space occupied during debugging,
         # only the model with more than cfg.save_iter iterations will be saved.
         if self.i_iter > self.cfg.save_iter:
+            print("Saving model!")
             self.save_model(all_error_avgs[0] + all_error_avgs[1], name='Sintel')
 
         return all_error_avgs, all_error_names

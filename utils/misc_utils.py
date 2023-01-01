@@ -44,8 +44,8 @@ class AverageMeter(object):
             self.avg[i] = self.sum[i] / self.count[i]
 
     def __repr__(self):
-        val = ' '.join(['{} {:.{}f}'.format(n, v, self.precision) for n, v in
+        val = ' '.join(['{}={:.{}f}'.format(n, v, self.precision) for n, v in
                         zip(self.names, self.val)])
-        avg = ' '.join(['{} {:.{}f}'.format(n, a, self.precision) for n, a in
+        avg = ' '.join([' {:.{}f}'.format(a, self.precision) for n, a in
                         zip(self.names, self.avg)])
         return '{} ({})'.format(val, avg)

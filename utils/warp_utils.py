@@ -110,3 +110,4 @@ def get_occu_mask_backward(flow21, th=0.2):
     corr_map = get_corresponding_map(base_grid + flow21)  # BHW
     occu_mask = corr_map.clamp(min=0., max=1.) < th
     return occu_mask.float()
+    
