@@ -1,11 +1,11 @@
 ## ARFlow + Softmax Splatting
 
-![Python 3.6](https://img.shields.io/badge/python-3.6-green.svg?style=plastic) ![PyTorch 1.14.0](https://img.shields.io/badge/pytorch-1.14.0-green.svg?style=plastic) ![License MIT](https://img.shields.io/github/license/lliuz/ARFlow)
+![Python 3.9](https://img.shields.io/badge/python-3.9-green.svg?style=plastic) ![PyTorch 1.14.0](https://img.shields.io/badge/pytorch-1.14.0-green.svg?style=plastic) ![License MIT](https://img.shields.io/github/license/lliuz/ARFlow)
 
 This repository contains a modified PyTorch implementation of the paper "[Learning by Analogy: Reliable Supervision from Transformations for Unsupervised Optical Flow Estimation](https://arxiv.org/abs/2003.13045)".
 
 The changes made as are follows:
-- The code has been updated to support PyTorch 1.14+ and recent versions of CUDA. This includes the . If you're just looking for an updated ARFlow, you can make use of the original code with this new correlation package. (some minor other changes needed too).
+- The code has been updated to support Python 3.9+, PyTorch 1.14+ and recent versions of CUDA. This includes the . If you're just looking for an updated ARFlow, you can make use of the original code with this new correlation package. (some minor other changes needed too).
 - Support has been added for Softmax Splatting and other techniques from https://arxiv.org/abs/2003.05534 within the photometric loss. Masking code is updated to match
 - SGD Optimiser, gradient clipping
 
